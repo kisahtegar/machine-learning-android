@@ -56,4 +56,5 @@ dependencies {
 
     // ML-Kit
     implementation(libs.text.recognition)
+    implementation(libs.translate)
 }
