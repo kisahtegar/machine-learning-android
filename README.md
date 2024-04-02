@@ -10,4 +10,4 @@ Learn how to implement barcode scanning in ML Kit.
 | Language                      | Kotlin                         |
 | Build Configuration Language  | Kotlin DSL                     |
 
-<img src="preview.png" alt="Preview 1" width="200" height="400">
+<img src="preview.jpg" alt="Preview 1" width="200" height="400">
