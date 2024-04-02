@@ -56,4 +56,6 @@ dependencies {
 
     // ML-Kit
     implementation(libs.text.recognition)
+    implementation(libs.androidx.camera.mlkit.vision)
+    implementation(libs.play.services.mlkit.barcode.scanning)
 }
