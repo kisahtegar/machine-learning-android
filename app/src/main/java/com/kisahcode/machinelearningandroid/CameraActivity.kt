@@ -86,7 +86,10 @@ class CameraActivity : AppCompatActivity() {
                             if (it.isNotEmpty() && it[0].categories.isNotEmpty()) {
                                 println(it)
 
-                                // Display the object detection results
+                                // Update the overlay view with detection results
+                                binding.overlay.setResults(results, imageHeight, imageWidth)
+
+                                // Display detection results and inference time
                                 val builder = StringBuilder()
                                 for (result in results) {
                                     val displayResult =
@@ -95,7 +98,6 @@ class CameraActivity : AppCompatActivity() {
                                     builder.append("$displayResult \n")
                                 }
                                 binding.tvResult.text = builder.toString()
-                                binding.tvResult.visibility = View.VISIBLE
                                 binding.tvInferenceTime.text = "$inferenceTime ms"
                             } else {
                                 // Clear UI if no object detection results are available
@@ -103,6 +105,8 @@ class CameraActivity : AppCompatActivity() {
                                 binding.tvInferenceTime.text = ""
                             }
                         }
+                        // Force a redraw of the overlay view
+                        binding.overlay.invalidate()
                     }
                 }
             }

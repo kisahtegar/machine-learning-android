@@ -12,4 +12,5 @@ TensorFlow Lite using GPU has performance 2-7 times faster than using CPU.
 | Language                      | Kotlin                         |
 | Build Configuration Language  | Kotlin DSL                     |
 
-<img src="preview.png" alt="Preview 1" width="200" height="400">
+<img src="preview_without_custom_view.png" alt="Preview 1" width="200" height="400">
+<img src="preview_with_custom_view.png" alt="Preview 1" width="200" height="400">
