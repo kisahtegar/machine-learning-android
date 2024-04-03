@@ -1,7 +1,7 @@
 # Image Classification GPU with Tensorflow Lite
 
 Learn how to implement image classification with Google Play Services dan GPU for Hardware Acceleration
-(Tensorflow Lite).
+(Tensorflow Lite). TensorFlow Lite using GPU has performance 2-7 times faster than using CPU.
 
 | Nama Project                  | MyCamera                       |
 |-------------------------------|--------------------------------|
