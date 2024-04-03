@@ -8,10 +8,16 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
+import androidx.camera.core.resolutionselector.AspectRatioStrategy
+import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import com.kisahcode.machinelearningandroid.databinding.ActivityCameraBinding
+import org.tensorflow.lite.task.vision.classifier.Classifications
+import java.text.NumberFormat
+import java.util.concurrent.Executors
 
 /**
  * An activity to capture images and scan barcodes using the device's camera.
@@ -19,6 +25,7 @@ import com.kisahcode.machinelearningandroid.databinding.ActivityCameraBinding
 class CameraActivity : AppCompatActivity() {
     private lateinit var binding: ActivityCameraBinding
     private var cameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+    private lateinit var imageClassifierHelper: ImageClassifierHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,26 +44,100 @@ class CameraActivity : AppCompatActivity() {
         startCamera()
     }
 
+    /**
+     * Starts the camera and sets up image analysis for classification.
+     */
     private fun startCamera() {
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+        // Initialize the ImageClassifierHelper instance
+        imageClassifierHelper = ImageClassifierHelper(
+            context = this,
+            classifierListener = object : ImageClassifierHelper.ClassifierListener {
 
-        cameraProviderFuture.addListener({
-            val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
-            val preview = Preview.Builder()
-                .build()
-                .also {
-                    it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
+                /**
+                 * Handles errors that occur during classification.
+                 *
+                 * @param error The error message.
+                 */
+                override fun onError(error: String) {
+                    // Show error message in UI
+                    runOnUiThread {
+                        Toast.makeText(this@CameraActivity, error, Toast.LENGTH_SHORT).show()
+                    }
                 }
 
+                /**
+                 * Processes the classification results.
+                 *
+                 * @param results The list of classification results.
+                 * @param inferenceTime The time taken for inference.
+                 */
+                override fun onResults(results: List<Classifications>?, inferenceTime: Long) {
+                    runOnUiThread {
+                        results?.let { it ->
+                            if (it.isNotEmpty() && it[0].categories.isNotEmpty()) {
+                                println(it)
+                                // Sort categories by score and display results in UI
+                                val sortedCategories =
+                                    it[0].categories.sortedByDescending { it?.score }
+                                val displayResult =
+                                    sortedCategories.joinToString("\n") {
+                                        "${it.label} " + NumberFormat.getPercentInstance()
+                                            .format(it.score).trim()
+                                    }
+
+                                // Update UI with classification results and inference time
+                                binding.tvResult.text = displayResult
+                                binding.tvInferenceTime.text = "$inferenceTime ms"
+                            } else {
+                                // Clear UI if no classification results are available
+                                binding.tvResult.text = ""
+                                binding.tvInferenceTime.text = ""
+                            }
+                        }
+                    }
+                }
+            }
+        )
+
+        // Initialize the camera provider
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+
+        // Set up camera provider listener
+        cameraProviderFuture.addListener({
+            // Configure the image analyzer
+            val resolutionSelector = ResolutionSelector.Builder()
+                .setAspectRatioStrategy(AspectRatioStrategy.RATIO_16_9_FALLBACK_AUTO_STRATEGY)
+                .build()
+            val imageAnalyzer = ImageAnalysis.Builder()
+                .setResolutionSelector(resolutionSelector)
+                .setTargetRotation(binding.viewFinder.display.rotation)
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+                .build()
+            imageAnalyzer.setAnalyzer(Executors.newSingleThreadExecutor()) { image ->
+                // Perform image classification
+                imageClassifierHelper.classifyImage(image)
+            }
+
+            // Get the camera provider
+            val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
+
+            // Set up preview
+            val preview = Preview.Builder().build().also {
+                it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
+            }
+
+            // Bind camera to lifecycle
             try {
                 cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(
                     this,
                     cameraSelector,
-                    preview
+                    preview,
+                    imageAnalyzer
                 )
-
             } catch (exc: Exception) {
+                // Handle camera setup failure
                 Toast.makeText(
                     this@CameraActivity,
                     "Gagal memunculkan kamera.",

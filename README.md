@@ -1,8 +1,8 @@
-# Machine Learning Android
+# Image Classification with Tensorflow Lite
 
-This repository used for learning:
+Learn how to implement image classification with tensorflow lite.
 
-| Nama Project                  | Machine Learning Android       |
+| Nama Project                  | MyCamera                       |
 |-------------------------------|--------------------------------|
 | Target & Minimum Target SDK   | Phone and Tablet, API level 21 |
 | Tipe Activity                 | Empty Views Activity           | 
@@ -10,3 +10,4 @@ This repository used for learning:
 | Language                      | Kotlin                         |
 | Build Configuration Language  | Kotlin DSL                     |
 
+<img src="preview.jpg" alt="Preview 1" width="200" height="400">
