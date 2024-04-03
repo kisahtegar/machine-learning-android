@@ -2,19 +2,24 @@ package com.kisahcode.machinelearningandroid
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.os.Build
 import android.os.SystemClock
 import android.util.Log
 import android.view.Surface
 import androidx.camera.core.ImageProxy
+import com.google.android.gms.tflite.client.TfLiteInitializationOptions
+import com.google.android.gms.tflite.gpu.support.TfLiteGpu
 import org.tensorflow.lite.DataType
+import org.tensorflow.lite.gpu.CompatibilityList
 import org.tensorflow.lite.support.common.ops.CastOp
 import org.tensorflow.lite.support.image.ImageProcessor
 import org.tensorflow.lite.support.image.TensorImage
 import org.tensorflow.lite.support.image.ops.ResizeOp
 import org.tensorflow.lite.task.core.BaseOptions
 import org.tensorflow.lite.task.core.vision.ImageProcessingOptions
-import org.tensorflow.lite.task.vision.classifier.Classifications
-import org.tensorflow.lite.task.vision.classifier.ImageClassifier
+import org.tensorflow.lite.task.gms.vision.TfLiteVision
+import org.tensorflow.lite.task.gms.vision.classifier.Classifications
+import org.tensorflow.lite.task.gms.vision.classifier.ImageClassifier
 
 /**
  * A helper class for performing image classification using TensorFlow Lite.
@@ -38,7 +43,23 @@ class ImageClassifierHelper(
      * Initializes the image classifier by setting up the required options and loading the model.
      */
     init {
-        setupImageClassifier()
+        // Check if GPU delegate is available
+        TfLiteGpu.isGpuDelegateAvailable(context).onSuccessTask { gpuAvailable ->
+            // Initialize TensorFlow Lite Vision with appropriate options
+            val optionsBuilder = TfLiteInitializationOptions.builder()
+            if (gpuAvailable) {
+                // Enable GPU delegate support if available
+                optionsBuilder.setEnableGpuDelegateSupport(true)
+            }
+            // Initialize TensorFlow Lite Vision with the chosen options
+            TfLiteVision.initialize(context, optionsBuilder.build())
+        }.addOnSuccessListener {
+            // TensorFlow Lite Vision initialization success, proceed with setting up image classifier
+            setupImageClassifier()
+        }.addOnFailureListener {
+            // TensorFlow Lite Vision initialization failure, notify the listener
+            classifierListener?.onError(context.getString(R.string.tflitevision_is_not_initialized_yet))
+        }
     }
 
     /**
@@ -52,7 +73,18 @@ class ImageClassifierHelper(
 
         // Build base options for the image classifier
         val baseOptionsBuilder = BaseOptions.builder()
-            .setNumThreads(4)
+
+        // Check device compatibility for hardware acceleration options
+        if (CompatibilityList().isDelegateSupportedOnThisDevice){
+            // Use GPU delegate if supported
+            baseOptionsBuilder.useGpu()
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1){
+            // Use NNAPI delegate for devices running Android Oreo MR1 (API 27) or higher
+            baseOptionsBuilder.useNnapi()
+        } else {
+            // Fall back to CPU if hardware acceleration is not available
+            baseOptionsBuilder.setNumThreads(4)
+        }
 
         // Set the base options for the image classifier
         optionsBuilder.setBaseOptions(baseOptionsBuilder.build())
@@ -77,6 +109,14 @@ class ImageClassifierHelper(
      * @param image The image to be classified.
      */
     fun classifyImage(image: ImageProxy) {
+        // Check if TfLiteVision is initialized
+        if (!TfLiteVision.isInitialized()) {
+            val errorMessage = context.getString(R.string.tflitevision_is_not_initialized_yet)
+            Log.e(TAG, errorMessage)
+            classifierListener?.onError(errorMessage)
+            return
+        }
+
         // Ensure the image classifier is initialized
         if (imageClassifier == null) {
             setupImageClassifier()
