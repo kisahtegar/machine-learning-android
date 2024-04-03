@@ -3,6 +3,7 @@ package com.kisahcode.machinelearningandroid
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.Toast
@@ -16,6 +17,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import com.kisahcode.machinelearningandroid.databinding.ActivityCameraBinding
 import org.tensorflow.lite.task.gms.vision.classifier.Classifications
+import org.tensorflow.lite.task.gms.vision.detector.Detection
 import java.text.NumberFormat
 import java.util.concurrent.Executors
 
@@ -25,7 +27,7 @@ import java.util.concurrent.Executors
 class CameraActivity : AppCompatActivity() {
     private lateinit var binding: ActivityCameraBinding
     private var cameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-    private lateinit var imageClassifierHelper: ImageClassifierHelper
+    private lateinit var objectDetectorHelper: ObjectDetectorHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,16 +47,16 @@ class CameraActivity : AppCompatActivity() {
     }
 
     /**
-     * Starts the camera and sets up image analysis for classification.
+     * Starts the camera and sets up image analysis for object detection.
      */
     private fun startCamera() {
-        // Initialize the ImageClassifierHelper instance
-        imageClassifierHelper = ImageClassifierHelper(
+        // Initialize the ObjectDetectorHelper instance
+        objectDetectorHelper = ObjectDetectorHelper(
             context = this,
-            classifierListener = object : ImageClassifierHelper.ClassifierListener {
+            detectorListener = object : ObjectDetectorHelper.DetectorListener {
 
                 /**
-                 * Handles errors that occur during classification.
+                 * Handles errors that occur during object detection.
                  *
                  * @param error The error message.
                  */
@@ -66,30 +68,37 @@ class CameraActivity : AppCompatActivity() {
                 }
 
                 /**
-                 * Processes the classification results.
+                 * Processes the object detection results.
                  *
-                 * @param results The list of classification results.
+                 * @param results The list of detected objects.
                  * @param inferenceTime The time taken for inference.
+                 * @param imageHeight The height of the input image.
+                 * @param imageWidth The width of the input image.
                  */
-                override fun onResults(results: List<Classifications>?, inferenceTime: Long) {
+                override fun onResults(
+                    results: MutableList<Detection>?,
+                    inferenceTime: Long,
+                    imageHeight: Int,
+                    imageWidth: Int
+                ) {
                     runOnUiThread {
                         results?.let { it ->
                             if (it.isNotEmpty() && it[0].categories.isNotEmpty()) {
                                 println(it)
-                                // Sort categories by score and display results in UI
-                                val sortedCategories =
-                                    it[0].categories.sortedByDescending { it?.score }
-                                val displayResult =
-                                    sortedCategories.joinToString("\n") {
-                                        "${it.label} " + NumberFormat.getPercentInstance()
-                                            .format(it.score).trim()
-                                    }
 
-                                // Update UI with classification results and inference time
-                                binding.tvResult.text = displayResult
+                                // Display the object detection results
+                                val builder = StringBuilder()
+                                for (result in results) {
+                                    val displayResult =
+                                        "${result.categories[0].label} " + NumberFormat.getPercentInstance()
+                                            .format(result.categories[0].score).trim()
+                                    builder.append("$displayResult \n")
+                                }
+                                binding.tvResult.text = builder.toString()
+                                binding.tvResult.visibility = View.VISIBLE
                                 binding.tvInferenceTime.text = "$inferenceTime ms"
                             } else {
-                                // Clear UI if no classification results are available
+                                // Clear UI if no object detection results are available
                                 binding.tvResult.text = ""
                                 binding.tvInferenceTime.text = ""
                             }
@@ -115,8 +124,8 @@ class CameraActivity : AppCompatActivity() {
                 .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
                 .build()
             imageAnalyzer.setAnalyzer(Executors.newSingleThreadExecutor()) { image ->
-                // Perform image classification
-                imageClassifierHelper.classifyImage(image)
+                // Perform object detection
+                objectDetectorHelper.detectObject(image)
             }
 
             // Get the camera provider

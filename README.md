@@ -1,7 +1,8 @@
-# Image Classification GPU with Tensorflow Lite
+# Object Detection GPU with Tensorflow Lite
 
-Learn how to implement image classification with Google Play Services dan GPU for Hardware Acceleration
-(Tensorflow Lite). TensorFlow Lite using GPU has performance 2-7 times faster than using CPU.
+Learn how to change [Image Classification](https://github.com/kisahtegar/machine-learning-android/tree/tfl-image-classification-gpu) 
+to Object Detection with Google Play Services dan GPU for Hardware Acceleration (Tensorflow Lite). 
+TensorFlow Lite using GPU has performance 2-7 times faster than using CPU.
 
 | Nama Project                  | MyCamera                       |
 |-------------------------------|--------------------------------|
