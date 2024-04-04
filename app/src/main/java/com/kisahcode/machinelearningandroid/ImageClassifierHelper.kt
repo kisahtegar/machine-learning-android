@@ -4,24 +4,21 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.os.SystemClock
 import android.util.Log
-import android.view.Surface
 import androidx.camera.core.ImageProxy
-import org.tensorflow.lite.DataType
-import org.tensorflow.lite.support.common.ops.CastOp
-import org.tensorflow.lite.support.image.ImageProcessor
-import org.tensorflow.lite.support.image.TensorImage
-import org.tensorflow.lite.support.image.ops.ResizeOp
-import org.tensorflow.lite.task.core.BaseOptions
-import org.tensorflow.lite.task.core.vision.ImageProcessingOptions
-import org.tensorflow.lite.task.vision.classifier.Classifications
-import org.tensorflow.lite.task.vision.classifier.ImageClassifier
+import com.google.mediapipe.framework.image.BitmapImageBuilder
+import com.google.mediapipe.tasks.components.containers.Classifications
+import com.google.mediapipe.tasks.core.BaseOptions
+import com.google.mediapipe.tasks.vision.core.ImageProcessingOptions
+import com.google.mediapipe.tasks.vision.core.RunningMode
+import com.google.mediapipe.tasks.vision.imageclassifier.ImageClassifier
 
 /**
- * A helper class for performing image classification using TensorFlow Lite.
+ * A helper class for performing image classification using TensorFlow Lite and MediaPipe.
  *
  * @property threshold The confidence threshold for classifying objects.
  * @property maxResults The maximum number of classification results to return.
  * @property modelName The name of the TensorFlow Lite model file.
+ * @property runningMode The running mode for the image classifier.
  * @property context The context used for loading the model file.
  * @property classifierListener The listener interface for handling classification results and errors.
  */
@@ -29,6 +26,7 @@ class ImageClassifierHelper(
     var threshold: Float = 0.1f,
     var maxResults: Int = 3,
     val modelName: String = "mobilenet_v1.tflite",
+    val runningMode: RunningMode = RunningMode.LIVE_STREAM,
     val context: Context,
     val classifierListener: ClassifierListener?
 ) {
@@ -43,25 +41,45 @@ class ImageClassifierHelper(
 
     /**
      * Sets up the image classifier by creating an instance with the specified options.
+     * This method configures the image classifier with the provided threshold, maximum results,
+     * and running mode. It also sets up listeners for handling classification results and errors.
      */
     private fun setupImageClassifier() {
         // Build options for the image classifier
         val optionsBuilder = ImageClassifier.ImageClassifierOptions.builder()
             .setScoreThreshold(threshold)
             .setMaxResults(maxResults)
+            .setRunningMode(runningMode)
+
+        // If the running mode is LIVE_STREAM, set up result and error listeners
+        if (runningMode == RunningMode.LIVE_STREAM) {
+            optionsBuilder.setResultListener { result, image ->
+                // Calculate inference time
+                val finishTimeMs = SystemClock.uptimeMillis()
+                val inferenceTime = finishTimeMs - result.timestampMs()
+
+                // Notify the classifier listener about the classification results
+                classifierListener?.onResults(
+                    result.classificationResult().classifications(),
+                    inferenceTime
+                )
+            }.setErrorListener { error ->
+                // Notify the classifier listener about any errors
+                classifierListener?.onError(error.message.toString())
+            }
+        }
 
         // Build base options for the image classifier
         val baseOptionsBuilder = BaseOptions.builder()
-            .setNumThreads(4)
+            .setModelAssetPath(modelName)
 
         // Set the base options for the image classifier
         optionsBuilder.setBaseOptions(baseOptionsBuilder.build())
 
         try {
-            // Create an image classifier instance from the model file and options
-            imageClassifier = ImageClassifier.createFromFileAndOptions(
+            // Create an instance of the image classifier with the configured options
+            imageClassifier = ImageClassifier.createFromOptions(
                 context,
-                modelName,
                 optionsBuilder.build()
             )
         } catch (e: IllegalStateException) {
@@ -73,8 +91,10 @@ class ImageClassifierHelper(
 
     /**
      * Classifies the image using the initialized image classifier.
+     * This method performs classification on the provided image and notifies the classifier listener
+     * about the classification results and inference time.
      *
-     * @param image The image to be classified.
+     * @param image The image to be classified in ImageProxy format.
      */
     fun classifyImage(image: ImageProxy) {
         // Ensure the image classifier is initialized
@@ -82,34 +102,19 @@ class ImageClassifierHelper(
             setupImageClassifier()
         }
 
-        // Build an image processor to resize and cast the input image
-        val imageProcessor = ImageProcessor.Builder()
-            .add(ResizeOp(224, 224, ResizeOp.ResizeMethod.NEAREST_NEIGHBOR))
-            .add(CastOp(DataType.UINT8))
-            .build()
+        // Convert the ImageProxy to a MediaPipe Image
+        val mpImage = BitmapImageBuilder(toBitmap(image)).build()
 
-        // Process the input image using the image processor
-        val tensorImage = imageProcessor.process(TensorImage.fromBitmap(toBitmap(image)))
-
-        // Build image processing options based on the image orientation
+        // Set up image processing options
         val imageProcessingOptions = ImageProcessingOptions.builder()
-            .setOrientation(getOrientationFromRotation(image.imageInfo.rotationDegrees))
+            .setRotationDegrees(image.imageInfo.rotationDegrees)
             .build()
 
         // Measure the inference time
-        var inferenceTime = SystemClock.uptimeMillis()
+        val inferenceTime = SystemClock.uptimeMillis()
 
-        // Classify the processed image using the image classifier
-        val results = imageClassifier?.classify(tensorImage, imageProcessingOptions)
-
-        // Calculate the inference time
-        inferenceTime = SystemClock.uptimeMillis() - inferenceTime
-
-        // Notify the listener with the classification results and inference time
-        classifierListener?.onResults(
-            results,
-            inferenceTime
-        )
+        // Perform asynchronous classification on the image
+        imageClassifier?.classifyAsync(mpImage, imageProcessingOptions, inferenceTime)
     }
 
     /**
@@ -134,21 +139,6 @@ class ImageClassifierHelper(
 
         // Return the converted Bitmap
         return bitmapBuffer
-    }
-
-    /**
-     * Determines the image orientation based on the rotation angle.
-     *
-     * @param rotation The rotation angle of the image.
-     * @return The corresponding image orientation.
-     */
-    private fun getOrientationFromRotation(rotation: Int): ImageProcessingOptions.Orientation {
-        return when (rotation) {
-            Surface.ROTATION_270 -> ImageProcessingOptions.Orientation.BOTTOM_RIGHT
-            Surface.ROTATION_180 -> ImageProcessingOptions.Orientation.RIGHT_BOTTOM
-            Surface.ROTATION_90 -> ImageProcessingOptions.Orientation.TOP_LEFT
-            else -> ImageProcessingOptions.Orientation.RIGHT_TOP
-        }
     }
 
     /**

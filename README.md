@@ -1,6 +1,6 @@
-# Image Classification with Tensorflow Lite
+# Image Classification with MediaPipe
 
-Learn how to implement image classification with tensorflow lite.
+Learn how to change [Image Classification](https://github.com/kisahtegar/machine-learning-android/tree/tfl-image-classification) with Tensorflow Lite to MediaPipe.
 
 | Nama Project                  | MyCamera                       |
 |-------------------------------|--------------------------------|
@@ -10,4 +10,4 @@ Learn how to implement image classification with tensorflow lite.
 | Language                      | Kotlin                         |
 | Build Configuration Language  | Kotlin DSL                     |
 
-<img src="preview.jpg" alt="Preview 1" width="200" height="400">
+<img src="preview.png" alt="Preview 1" width="200" height="400">
