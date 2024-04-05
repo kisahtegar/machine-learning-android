@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -52,4 +53,7 @@ dependencies {
     // Tensorflow Lite
     implementation(libs.play.services.tflite.java)
     implementation(libs.play.services.tflite.gpu)
+
+    implementation(libs.firebase.bom)
+    implementation(libs.firebase.ml.modeldownloader)
 }

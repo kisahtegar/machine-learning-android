@@ -11,15 +11,16 @@ import com.kisahcode.machinelearningandroid.databinding.ActivityMainBinding
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private lateinit var predictionHelper: PredictionHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        binding.btnPredict.isEnabled = false
+
         // Initialize PredictionHelper for performing predictions
-        predictionHelper = PredictionHelper(
+        val predictionHelper = PredictionHelper(
             context = this,
             onResult = { result ->
                 // Update UI with prediction result
@@ -28,6 +29,10 @@ class MainActivity : AppCompatActivity() {
             onError = { errorMessage ->
                 // Display error message in a toast
                 Toast.makeText(this@MainActivity, errorMessage, Toast.LENGTH_SHORT).show()
+            },
+            onDownloadSuccess = {
+                // Enable the predict button once the model is downloaded successfully
+                binding.btnPredict.isEnabled = true
             }
         )
 
@@ -37,14 +42,5 @@ class MainActivity : AppCompatActivity() {
             val input = binding.edSales.text.toString()
             predictionHelper.predict(input)
         }
-    }
-
-    /**
-     * Called when the activity is about to be destroyed.
-     */
-    override fun onDestroy() {
-        super.onDestroy()
-        // Close PredictionHelper to release associated resources
-        predictionHelper.close()
     }
 }

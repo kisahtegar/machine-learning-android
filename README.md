@@ -1,6 +1,7 @@
-# Prediction using Regression with Interpreter
+# Prediction using Regression with Interpreter (Firebase Machine Learning)
 
-Learn to utilize the Interpreter API to predict rice stocks using regression techniques.
+Learn to utilize the Interpreter API to predict rice stocks using regression techniques with Firebase
+Machine Learning import model.
 
 | Nama Project                  | Latihan TensorFlow Lite (prediction)  |
 |-------------------------------|---------------------------------------|

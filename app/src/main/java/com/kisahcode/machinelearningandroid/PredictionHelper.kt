@@ -6,6 +6,10 @@ import android.util.Log
 import com.google.android.gms.tflite.client.TfLiteInitializationOptions
 import com.google.android.gms.tflite.gpu.support.TfLiteGpu
 import com.google.android.gms.tflite.java.TfLite
+import com.google.firebase.ml.modeldownloader.CustomModel
+import com.google.firebase.ml.modeldownloader.CustomModelDownloadConditions
+import com.google.firebase.ml.modeldownloader.DownloadType
+import com.google.firebase.ml.modeldownloader.FirebaseModelDownloader
 import org.tensorflow.lite.InterpreterApi
 import org.tensorflow.lite.gpu.GpuDelegateFactory
 import java.io.FileInputStream
@@ -17,20 +21,24 @@ import java.nio.channels.FileChannel
 /**
  * A helper class for performing predictions using a TensorFlow Lite model for rice stock prediction.
  *
+ * This class facilitates the loading of a TensorFlow Lite model for predicting rice stock based on input data.
+ * It provides methods to initialize the interpreter, perform predictions, and handle prediction outcomes.
+ *
  * @property context The context used for loading the model file.
- * @property modelName The name of the TensorFlow Lite model file.
- * @property onError A lambda function to handle prediction errors.
- * @property onResult A lambda function to handle the prediction result.
+ * @property modelName The name of the TensorFlow Lite model file. Default value is "rice_stock.tflite".
+ * @property onResult A lambda function to handle the prediction result. Invoked when a prediction is successfully made.
+ * @property onError A lambda function to handle prediction errors. Invoked when an error occurs during prediction.
+ * @property onDownloadSuccess A lambda function to handle successful model download. Invoked when the model is successfully downloaded.
  */
 class PredictionHelper(
-    val context: Context,
     private val modelName: String = "rice_stock.tflite",
-    private val onError: (String) -> Unit,
+    val context: Context,
     private val onResult: (String) -> Unit,
+    private val onError: (String) -> Unit,
+    private val onDownloadSuccess: () -> Unit,
 ) {
 
     private var interpreter: InterpreterApi? = null
-    private var isGPUSupported: Boolean = false
 
     /**
      * Initializes the PredictionHelper by checking GPU availability and loading the model.
@@ -45,15 +53,13 @@ class PredictionHelper(
             if (gpuAvailable) {
                 // Sets GPU delegate support if available.
                 optionsBuilder.setEnableGpuDelegateSupport(true)
-                // Updates the flag to indicate GPU support.
-                isGPUSupported = true
             }
 
             // Initializes TensorFlow Lite with the specified options.
             TfLite.initialize(context, optionsBuilder.build())
         }.addOnSuccessListener {
-            // If TensorFlow Lite initialization succeeds, load the local model.
-            loadLocalModel()
+            downloadModel()
+//            loadLocalModel()
         }.addOnFailureListener {
             // If TensorFlow Lite initialization fails, handle the error by calling the onError lambda function.
             onError(context.getString(R.string.tflite_is_not_initialized_yet))
@@ -75,10 +81,39 @@ class PredictionHelper(
         }
     }
 
+    @Synchronized
+    private fun downloadModel(){
+        // Set download conditions to require Wi-Fi
+        val conditions = CustomModelDownloadConditions.Builder()
+            .requireWifi()
+            .build()
+
+        // Get the model from Firebase ML Model Downloader
+        FirebaseModelDownloader.getInstance()
+            .getModel("Rice-Stock", DownloadType.LOCAL_MODEL, conditions)
+            .addOnSuccessListener { model: CustomModel ->
+                try {
+                    // Initialize interpreter with the downloaded model
+                    initializeInterpreter(model)
+
+                    // Invoke onDownloadSuccess lambda function
+                    onDownloadSuccess()
+                } catch (e: IOException) {
+                    // If an I/O exception occurs, invoke onError lambda function with error message
+                    onError(e.message.toString())
+                }
+            }
+            .addOnFailureListener { e: Exception? ->
+                // If download fails, invoke onError lambda function with appropriate error message
+                onError(context.getString(R.string.firebaseml_model_download_failed))
+            }
+    }
+
     /**
      * Initializes the TensorFlow Lite interpreter with the loaded model.
      *
-     * @param model The TensorFlow Lite model to be used for inference. It can be provided as a ByteBuffer.
+     * @param model The TensorFlow Lite model to be used for inference. It can be provided as a ByteBuffer
+     * or CustomModel.
      */
     private fun initializeInterpreter(model: Any) {
         // Close the existing interpreter, if any, to release associated resources
@@ -88,16 +123,17 @@ class PredictionHelper(
             // Create options for configuring the TensorFlow Lite interpreter
             val options = InterpreterApi.Options()
                 .setRuntime(InterpreterApi.Options.TfLiteRuntime.FROM_SYSTEM_ONLY)
+                .addDelegateFactory(GpuDelegateFactory())
 
-            // Add GPU delegate to interpreter options if GPU support is available
-            if (isGPUSupported){
-                options.addDelegateFactory(GpuDelegateFactory())
-            }
-
-            // Check if the model is provided as a ByteBuffer
+            // Check the type of the provided model and create interpreter accordingly
             if (model is ByteBuffer) {
-                // Create TensorFlow Lite interpreter using the provided model and options
+                // Create interpreter directly from the ByteBuffer
                 interpreter = InterpreterApi.create(model, options)
+            } else if (model is CustomModel){
+                // Create interpreter from the file associated with the CustomModel
+                model.file?.let {
+                    interpreter = InterpreterApi.create(it, options)
+                }
             }
         } catch (e: Exception) {
             // Handle any exceptions that occur during interpreter initialization

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "159937859165",
+    "project_id": "ml-dicoding-630cf",
+    "storage_bucket": "ml-dicoding-630cf.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:159937859165:android:946b0d6fd7532eda7d87b4",
+        "android_client_info": {
+          "package_name": "com.kisahcode.machinelearningandroid"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDFfWyGZLXNLVJwaQKsCtMBXM749cRXAKo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
