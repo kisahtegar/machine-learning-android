@@ -33,3 +33,17 @@ This link contains a Tensorflow Lite sources:
 - [tfl-image-classification-gpu: Learn how to implement image classification with Google Play Services and GPU for Hardware Acceleration.](https://github.com/kisahtegar/machine-learning-android/tree/tfl-image-classification-gpu)
 - [tfl-image-classification-object-detection: Learn how to change Image Classification to Object Detection use GPU for Hardware Acceleration.](https://github.com/kisahtegar/machine-learning-android/tree/tfl-image-classification-object-detection)
 - [tfl-prediction-regression-interpreter: Learn to utilize the Interpreter API to predict rice stocks using regression techniques.](https://github.com/kisahtegar/machine-learning-android/tree/tfl-prediction-regression-interpreter)
+
+## 🎷 MediaPipe
+
+This link contains a MediaPipe sources:
+
+- [mp-image-classification: Learn how to change Image Classification with Tensorflow Lite to MediaPipe.](https://github.com/kisahtegar/machine-learning-android/tree/mp-image-classification)
+- [mp-audio-classification: Learn how to implement audio classification with MediaPipe.](https://github.com/kisahtegar/machine-learning-android/tree/mp-audio-classification)
+- [mp-text-classification: Learn how to implement Text Classification for Sentiment Analysis using MediaPipe.](https://github.com/kisahtegar/machine-learning-android/tree/mp-text-classification)
+
+## 🔥 Firebase Machine Learning
+
+This link contains a Firebase Machine Learning sources:
+
+- [fml-prediction-regression-interpreter: Implement Firebase Machine Learning import model.](https://github.com/kisahtegar/machine-learning-android/tree/fml-prediction-regression-interpreter)
