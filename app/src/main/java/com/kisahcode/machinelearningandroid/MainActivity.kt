@@ -1,20 +1,31 @@
 package com.kisahcode.machinelearningandroid
 
-import android.os.Bundle
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import android.os.Bundle
+import android.util.Log
 
+/**
+ * The main activity of the application responsible for initializing the chat fragment.
+ */
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
+
+        // Get the fragment manager
+        val fragmentManager = supportFragmentManager
+        // Create an instance of the ChatFragment
+        val chatFragment = ChatFragment()
+        // Find the existing fragment by its tag
+        val fragment = fragmentManager.findFragmentByTag(ChatFragment::class.java.simpleName)
+
+        // If the fragment is not an instance of ChatFragment, add it to the activity
+        if (fragment !is ChatFragment) {
+            Log.d("MyChatFragment", "Fragment Name :" + ChatFragment::class.java.simpleName)
+            fragmentManager
+                .beginTransaction()
+                .add(R.id.container, chatFragment, ChatFragment::class.java.simpleName)
+                .commit()
         }
     }
 }
